@@ -1,0 +1,6 @@
+{
+  "name": "BloxManasik: Petualangan Haji & Umrah 3D",
+  "description": "Media pembelajaran interaktif 3D bergaya Roblox untuk simulasi ibadah Haji (Tamattu', Qiran, Ifrad) dan Umrah lengkap dengan video animasi penjelasan, kuis pemahaman, lencana digital, dan papan peringkat.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
