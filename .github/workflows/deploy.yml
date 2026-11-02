@@ -4,8 +4,9 @@ on:
   push:
     branches: [ main ]
 
+# Berikan izin secara eksplisit di sini
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -13,13 +14,11 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: Setup Bun (atau Node/NPM sesuai proyek Anda)
         uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
 
       - name: Install dependencies
         run: bun install
