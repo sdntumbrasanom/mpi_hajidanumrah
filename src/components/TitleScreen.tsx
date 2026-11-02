@@ -92,112 +92,65 @@ export function TitleScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-20 flex flex-col justify-between p-4 sm:p-6 pointer-events-none">
-      {/* Top Bar — Transparent Floating Header with Fullscreen & Portal Guru */}
-      <header className="flex items-center justify-between gap-6 px-4 py-2.5 rounded-xl bg-slate-950/45 border border-white/15 pointer-events-auto">
-        {/* Zone 1: Brand Wordmark */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <svg
-            width="30"
-            height="30"
-            viewBox="0 0 48 48"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <rect x="4" y="4" width="40" height="40" rx="10" fill="#0F172A" stroke="#FACC15" strokeWidth="2.5" />
-            <rect x="13" y="12" width="22" height="24" rx="3" fill="#1E293B" stroke="#F8FAFC" strokeWidth="1.5" />
-            <rect x="13" y="18" width="22" height="5" fill="#FACC15" />
-            <rect x="26" y="26" width="5" height="10" rx="1" fill="#FACC15" />
-          </svg>
-          <span className="text-sm sm:text-base font-extrabold tracking-tight text-white drop-shadow whitespace-nowrap">
-            BLOX<span className="text-amber-400">MANASIK</span> 3D
-          </span>
-        </div>
+    <div className="fixed inset-0 z-20 flex flex-col justify-between p-4 sm:p-5 pointer-events-none">
+      {/* Top-Right Icon-Only Utility Cluster (Flush Right, No Background) */}
+      <header className="flex items-center justify-end gap-1.5 sm:gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            soundEngine.playClick();
+            onOpenLeaderboard();
+          }}
+          className="pointer-events-auto p-2 text-slate-900 hover:text-amber-600 hover:scale-110 transition-all drop-shadow-[0_1px_3px_rgba(255,255,255,0.95)]"
+          title="Leaderboard"
+          aria-label="Leaderboard"
+        >
+          <Trophy className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.25]" />
+        </button>
 
-        {/* Zone 2: Clean Utility Navigation */}
-        <nav className="hidden md:flex items-center gap-6 text-xs sm:text-sm font-semibold text-white drop-shadow">
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.playClick();
-              onOpenLeaderboard();
-            }}
-            className="inline-flex items-center gap-1.5 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0"
-          >
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <span>Leaderboard</span>
-          </button>
+        <button
+          type="button"
+          onClick={onToggleMute}
+          className="pointer-events-auto p-2 text-slate-900 hover:text-emerald-700 hover:scale-110 transition-all drop-shadow-[0_1px_3px_rgba(255,255,255,0.95)]"
+          title={muted ? 'Nyalakan Suara' : 'Matikan Suara'}
+          aria-label={muted ? 'Nyalakan Suara' : 'Matikan Suara'}
+        >
+          {muted ? (
+            <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.25] opacity-65" />
+          ) : (
+            <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.25]" />
+          )}
+        </button>
 
-          <button
-            type="button"
-            onClick={onToggleMute}
-            className="inline-flex items-center gap-1.5 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0"
-          >
-            {muted ? (
-              <VolumeX className="w-4 h-4 text-slate-300" />
-            ) : (
-              <Volume2 className="w-4 h-4 text-emerald-400" />
-            )}
-            <span>{muted ? 'Suara Mati' : 'Suara Aktif'}</span>
-          </button>
+        <button
+          type="button"
+          onClick={() => {
+            soundEngine.playClick();
+            onToggleFullscreen();
+          }}
+          className="pointer-events-auto p-2 text-slate-900 hover:text-sky-700 hover:scale-110 transition-all drop-shadow-[0_1px_3px_rgba(255,255,255,0.95)]"
+          title={isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
+          aria-label={isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.25]" />
+          ) : (
+            <Maximize2 className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.25]" />
+          )}
+        </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.playClick();
-              onToggleFullscreen();
-            }}
-            className="inline-flex items-center gap-1.5 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0"
-          >
-            {isFullscreen ? (
-              <Minimize2 className="w-4 h-4 text-sky-300" />
-            ) : (
-              <Maximize2 className="w-4 h-4 text-sky-300" />
-            )}
-            <span>{isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}</span>
-          </button>
-        </nav>
-
-        {/* Zone 3: Mobile Icons + Primary Teacher Portal Action */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.playClick();
-              onToggleFullscreen();
-            }}
-            className="md:hidden p-2 rounded-lg bg-slate-950/60 border border-white/15 text-sky-300 hover:text-white"
-            aria-label={isFullscreen ? 'Keluar layar penuh' : 'Layar penuh'}
-            title={isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.playClick();
-              onOpenLeaderboard();
-            }}
-            className="md:hidden p-2 rounded-lg bg-slate-950/60 border border-white/15 text-amber-300"
-            aria-label="Leaderboard"
-          >
-            <Trophy className="w-4 h-4" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              soundEngine.playClick();
-              onOpenTeacherPortal();
-            }}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-950/65 hover:bg-slate-900/85 border border-amber-400/45 text-xs sm:text-sm font-bold text-white transition-colors whitespace-nowrap shrink-0"
-          >
-            <GraduationCap className="w-4 h-4 text-amber-400" />
-            <span>Portal Guru</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            soundEngine.playClick();
+            onOpenTeacherPortal();
+          }}
+          className="pointer-events-auto p-2 text-slate-900 hover:text-amber-600 hover:scale-110 transition-all drop-shadow-[0_1px_3px_rgba(255,255,255,0.95)]"
+          title="Portal Guru"
+          aria-label="Portal Guru"
+        >
+          <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.25]" />
+        </button>
       </header>
 
       {/* Centered Transparent Hero Login Card Over Live 3D Masjidil Haram */}
