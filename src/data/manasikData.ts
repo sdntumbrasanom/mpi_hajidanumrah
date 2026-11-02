@@ -193,3 +193,49 @@ export const WORSHIP_PROGRAMS: WorshipProgramMap = {
     ],
   },
 };
+qiran: {
+    // ... (kode qiran yang sudah ada)
+  },
+  umrah: {
+    id: 'umrah',
+    name: 'Ibadah Umrah Saja',
+    description: 'Melaksanakan rangkaian ibadah umrah di Tanah Suci.',
+    stations: [
+      {
+        id: 'ihram',
+        stepNumber: 1,
+        title: 'Miqat & Niat Ihram Umrah',
+        shortLabel: 'Miqat Ihram',
+        description: 'Berniat ihram umrah dari miqat.',
+        pointsReward: 100,
+        badge: { id: 'ihram', name: 'Miqat & Ihram', emblem: 'ihram' },
+      },
+      {
+        id: 'tawaf',
+        stepNumber: 2,
+        title: 'Tawaf Umrah',
+        shortLabel: 'Tawaf',
+        description: 'Mengelilingi Ka\'bah sebanyak 7 putaran.',
+        pointsReward: 120,
+        badge: { id: 'tawaf', name: 'Tawaf Umrah', emblem: 'tawaf' },
+      },
+      {
+        id: 'saie',
+        stepNumber: 3,
+        title: 'Sa\'i Shafa & Marwah',
+        shortLabel: 'Sa\'i',
+        description: 'Berjalan antara bukit Shafa dan Marwah sebanyak 7 kali.',
+        pointsReward: 120,
+        badge: { id: 'saie', name: 'Sa\'i Shafa-Marwah', emblem: 'saie' },
+      },
+      {
+        id: 'tahallul',
+        stepNumber: 4,
+        title: 'Tahallul / Cukur Rambut',
+        shortLabel: 'Tahallul',
+        description: 'Memotong rambut sebagai tanda selesai umrah.',
+        pointsReward: 150,
+        badge: { id: 'jumrah', name: 'Tahallul Umrah', emblem: 'jumrah' },
+      },
+    ],
+  },
