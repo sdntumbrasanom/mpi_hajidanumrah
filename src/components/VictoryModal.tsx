@@ -75,7 +75,7 @@ export function VictoryModal({
             Selamat, {entry.studentName}!
           </h2>
           <p className="text-xs sm:text-sm text-slate-300">
-            Program <strong>{program.name}</strong> telah dituntaskan dengan baik.
+            Program <strong>{program?.name ?? 'Manasik'}</strong> telah dituntaskan dengan baik.
           </p>
         </div>
 
