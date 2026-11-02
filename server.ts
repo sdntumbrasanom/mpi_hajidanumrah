@@ -1,4 +1,6 @@
-import express from 'express';
+import 'dotenv/config';
+import crypto from 'crypto';
+import express, { NextFunction, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
@@ -39,6 +41,39 @@ const DEFAULT_STORE: DataStoreShape = {
     schoolName: '',
   },
 };
+
+const TEACHER_PORTAL_USER = process.env.TEACHER_PORTAL_USER || 'guru';
+const TEACHER_PORTAL_PASSWORD = process.env.TEACHER_PORTAL_PASSWORD || 'guruhebat';
+const TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
+const activeTeacherTokens = new Map<string, number>();
+
+function safeEqualString(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf-8');
+  const bufB = Buffer.from(b, 'utf-8');
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+function extractBearerToken(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) return null;
+  return header.slice(7).trim() || null;
+}
+
+function requireTeacherAuth(req: Request, res: Response, next: NextFunction): void {
+  const token = extractBearerToken(req);
+  if (!token) {
+    res.status(401).json({ error: 'Sesi Portal Guru tidak valid. Silakan login kembali.' });
+    return;
+  }
+  const expiresAt = activeTeacherTokens.get(token);
+  if (!expiresAt || Date.now() > expiresAt) {
+    activeTeacherTokens.delete(token);
+    res.status(401).json({ error: 'Sesi Portal Guru telah berakhir. Silakan login kembali.' });
+    return;
+  }
+  next();
+}
 
 function readStore(): DataStoreShape {
   try {
@@ -82,6 +117,46 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json({ limit: '512kb' }));
+
+  // Authenticate Teacher Portal credentials server-side (credentials never exposed to client)
+  app.post('/api/teacher-auth/login', (req, res) => {
+    const { username, password } = (req.body ?? {}) as {
+      username?: unknown;
+      password?: unknown;
+    };
+    const inputUser = typeof username === 'string' ? username.trim() : '';
+    const inputPass = typeof password === 'string' ? password : '';
+
+    const validUser = safeEqualString(inputUser, TEACHER_PORTAL_USER);
+    const validPass = safeEqualString(inputPass, TEACHER_PORTAL_PASSWORD);
+
+    if (!validUser || !validPass) {
+      res.status(401).json({
+        ok: false,
+        error: 'Username atau password yang Anda masukkan salah.',
+      });
+      return;
+    }
+
+    // Prune expired tokens
+    const now = Date.now();
+    for (const [tok, exp] of activeTeacherTokens.entries()) {
+      if (now > exp) activeTeacherTokens.delete(tok);
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    activeTeacherTokens.set(token, now + TOKEN_TTL_MS);
+
+    res.json({ ok: true, token });
+  });
+
+  app.post('/api/teacher-auth/logout', (req, res) => {
+    const token = extractBearerToken(req);
+    if (token) {
+      activeTeacherTokens.delete(token);
+    }
+    res.json({ ok: true });
+  });
 
   // GET all student simulation results & teacher settings
   app.get('/api/results', (_req, res) => {
@@ -138,25 +213,25 @@ async function startServer() {
     res.json({ ok: true, entry: sanitized, results: store.results });
   });
 
-  // Delete a specific student result from Teacher Portal
-  app.delete('/api/results/:id', (req, res) => {
-    const targetId = req.params.id;
+  // Delete a specific student result from Teacher Portal (protected)
+  app.delete('/api/results/:id', requireTeacherAuth, (req, res) => {
+    const targetId = String(req.params.id);
     const store = readStore();
     store.results = store.results.filter((r) => r.id !== targetId);
     writeStore(store);
     res.json({ ok: true, results: store.results });
   });
 
-  // Clear all student results from Teacher Portal
-  app.delete('/api/results', (_req, res) => {
+  // Clear all student results from Teacher Portal (protected)
+  app.delete('/api/results', requireTeacherAuth, (_req, res) => {
     const store = readStore();
     store.results = [];
     writeStore(store);
     res.json({ ok: true, results: [] });
   });
 
-  // Update default Teacher WhatsApp & School configuration
-  app.post('/api/teacher-config', (req, res) => {
+  // Update default Teacher WhatsApp & School configuration (protected)
+  app.post('/api/teacher-config', requireTeacherAuth, (req, res) => {
     const body = req.body as Partial<StoredTeacherConfig>;
     const store = readStore();
     store.teacherConfig = {

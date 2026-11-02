@@ -116,6 +116,7 @@ export default function App() {
   const [showVideoQuizModal, setShowVideoQuizModal] = useState(false);
   const [showFullLeaderboard, setShowFullLeaderboard] = useState(false);
   const [showTeacherPortal, setShowTeacherPortal] = useState(false);
+  const [teacherAuthToken, setTeacherAuthToken] = useState<string | null>(null);
   const [isSyncingPortal, setIsSyncingPortal] = useState(false);
   const [hudDockCollapsed, setHudDockCollapsed] = useState(false);
 
@@ -301,6 +302,21 @@ export default function App() {
     screen,
   ]);
 
+  const handleCloseTeacherPortal = useCallback(() => {
+    setShowTeacherPortal(false);
+    setTeacherAuthToken((prevToken) => {
+      if (prevToken) {
+        fetch('/api/teacher-auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${prevToken}` },
+        }).catch(() => {
+          // Ignore network errors
+        });
+      }
+      return null;
+    });
+  }, []);
+
   // Keyboard shortcuts (Tab Leaderboard, H Hide Dock, F Fullscreen, Esc Close Modal)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -318,14 +334,21 @@ export default function App() {
       } else if (e.code === 'KeyF' && !showVideoQuizModal && !showTeacherPortal) {
         handleToggleFullscreen();
       } else if (e.code === 'Escape') {
-        if (showTeacherPortal) setShowTeacherPortal(false);
+        if (showTeacherPortal) handleCloseTeacherPortal();
         else if (showFullLeaderboard) setShowFullLeaderboard(false);
         else if (showVideoQuizModal) setShowVideoQuizModal(false);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [screen, showTeacherPortal, showFullLeaderboard, showVideoQuizModal, handleToggleFullscreen]);
+  }, [
+    screen,
+    showTeacherPortal,
+    showFullLeaderboard,
+    showVideoQuizModal,
+    handleToggleFullscreen,
+    handleCloseTeacherPortal,
+  ]);
 
   const handleToggleMute = () => {
     const nextMuted = soundEngine.toggleMute();
@@ -407,6 +430,7 @@ export default function App() {
   );
 
   const handleSaveTeacherConfig = async (cfg: TeacherConfig) => {
+    if (!teacherAuthToken) return;
     setTeacherConfig(cfg);
     if (cfg.teacherPhone && !teacherPhone) {
       setTeacherPhone(cfg.teacherPhone);
@@ -419,7 +443,10 @@ export default function App() {
     try {
       await fetch('/api/teacher-config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${teacherAuthToken}`,
+        },
         body: JSON.stringify(cfg),
       });
     } catch {
@@ -428,6 +455,7 @@ export default function App() {
   };
 
   const handleDeleteEntry = async (id: string) => {
+    if (!teacherAuthToken) return;
     setLeaderboard((prev) => {
       const next = prev.filter((item) => item.id !== id);
       try {
@@ -441,13 +469,17 @@ export default function App() {
       return next;
     });
     try {
-      await fetch(`/api/results/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      await fetch(`/api/results/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${teacherAuthToken}` },
+      });
     } catch {
       // Ignore
     }
   };
 
   const handleClearAllEntries = async () => {
+    if (!teacherAuthToken) return;
     setLeaderboard([]);
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
@@ -455,7 +487,10 @@ export default function App() {
       // Ignore
     }
     try {
-      await fetch('/api/results', { method: 'DELETE' });
+      await fetch('/api/results', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${teacherAuthToken}` },
+      });
     } catch {
       // Ignore
     }
@@ -850,17 +885,19 @@ export default function App() {
         />
       )}
 
-      {/* Teacher Portal Modal (Portal Guru: View & Download Student Results) */}
+      {/* Teacher Portal Modal (Protected by Secret Username & Password) */}
       {showTeacherPortal && (
         <TeacherPortalModal
+          authToken={teacherAuthToken}
           entries={leaderboard}
           teacherConfig={teacherConfig}
           isLoading={isSyncingPortal}
+          onAuthenticated={(token) => setTeacherAuthToken(token)}
           onRefresh={fetchServerResults}
           onSaveTeacherConfig={handleSaveTeacherConfig}
           onDeleteEntry={handleDeleteEntry}
           onClearAllEntries={handleClearAllEntries}
-          onClose={() => setShowTeacherPortal(false)}
+          onClose={handleCloseTeacherPortal}
         />
       )}
 
