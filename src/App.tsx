@@ -148,7 +148,7 @@ export default function App() {
   // Pengaman fallback agar program tidak pernah undefined
   const validWorshipKey = WORSHIP_PROGRAMS[worshipType] ? worshipType : 'tamattu';
   const program = WORSHIP_PROGRAMS[validWorshipKey];
-  const activeStation = program?.stations?[activeStationIndex] ?? null;
+  const activeStation = program?.stations?.[activeStationIndex] ?? null;
 
   // Fullscreen listener & cross-browser toggle
   useEffect(() => {
