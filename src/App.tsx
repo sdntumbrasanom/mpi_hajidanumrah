@@ -145,8 +145,10 @@ export default function App() {
     nearStationPortal: false,
   });
 
-  const program = WORSHIP_PROGRAMS[worshipType];
-  const activeStation = program.stations[activeStationIndex] ?? null;
+  // Pengaman fallback agar program tidak pernah undefined
+  const validWorshipKey = WORSHIP_PROGRAMS[worshipType] ? worshipType : 'tamattu';
+  const program = WORSHIP_PROGRAMS[validWorshipKey];
+  const activeStation = program?.stations?[activeStationIndex] ?? null;
 
   // Fullscreen listener & cross-browser toggle
   useEffect(() => {
@@ -251,7 +253,7 @@ export default function App() {
       worshipType,
       points,
       completedStationIds,
-      totalStations: program.stations.length,
+      totalStations: program?.stations?.length || 0,
       badges: earnedBadges,
       updatedAt: Date.now(),
       completedAt: completedAtTimestamp,
@@ -295,7 +297,7 @@ export default function App() {
     completedStationIds,
     completedAtTimestamp,
     earnedBadges,
-    program.stations.length,
+    program?.stations?.length,
     screen,
   ]);
 
@@ -368,7 +370,7 @@ export default function App() {
 
   const handleStationSimulationComplete = useCallback(
     (finishedStationId: string) => {
-      const stIndex = program.stations.findIndex((s) => s.id === finishedStationId);
+      const stIndex = program?.stations?.findIndex((s) => s.id === finishedStationId) ?? -1;
       if (stIndex < 0) return;
       const finishedSt = program.stations[stIndex];
 
@@ -401,7 +403,7 @@ export default function App() {
         }, 2000);
       }
     },
-    [program.stations]
+    [program?.stations]
   );
 
   const handleSaveTeacherConfig = async (cfg: TeacherConfig) => {
@@ -474,7 +476,7 @@ export default function App() {
       worshipType,
       points,
       completedStationIds,
-      totalStations: program.stations.length,
+      totalStations: program?.stations?.length || 0,
       badges: earnedBadges,
       updatedAt: Date.now(),
       completedAt: completedAtTimestamp ?? Date.now(),
@@ -488,7 +490,7 @@ export default function App() {
       worshipType,
       points,
       completedStationIds,
-      program.stations.length,
+      program?.stations?.length,
       earnedBadges,
       completedAtTimestamp,
     ]
@@ -517,7 +519,7 @@ export default function App() {
       {screen === 'title' && (
         <TitleScreen
           initialName={studentName}
-          initialTeacherPhone={teacherPhone || teacherConfig.teacherPhone}
+          initialTeacherPhone={teacherPhone || teacherConfig?.teacherPhone || ''}
           gender={gender}
           worshipType={worshipType}
           muted={muted}
@@ -536,7 +538,7 @@ export default function App() {
       )}
 
       {/* Playing HUD — Low-Occlusion Perimeter Clusters (>=85% Unobstructed 3D Viewport) */}
-      {screen === 'playing' && activeStation && (
+      {screen === 'playing' && activeStation && program && (
         <div className="fixed inset-0 z-10 pointer-events-none flex flex-col justify-between p-3 sm:p-4">
           {/* Top Row: Left Status + Fullscreen + Camera Controls | Right Checklist & Leaderboard */}
           <div className="flex items-start justify-between gap-3">
@@ -557,9 +559,9 @@ export default function App() {
 
               <div className="px-3.5 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-100">
                 <p className="text-[11px] text-amber-400 font-semibold leading-none">
-                  {program.name} · Pos {activeStation.stepNumber}/{program.stations.length}
+                  {program?.name} · Pos {activeStation?.stepNumber}/{program?.stations?.length}
                 </p>
-                <p className="text-sm font-bold text-white mt-0.5">{activeStation.title}</p>
+                <p className="text-sm font-bold text-white mt-0.5">{activeStation?.title}</p>
               </div>
 
               <button
@@ -614,9 +616,9 @@ export default function App() {
             <CompactRobloxLeaderboard
               studentName={studentName}
               points={points}
-              stations={program.stations}
+              stations={program?.stations || []}
               completedStationIds={completedStationIds}
-              activeStationId={activeStation.id}
+              activeStationId={activeStation?.id || null}
               leaderboard={leaderboard}
               onOpenFullModal={() => setShowFullLeaderboard(true)}
             />
@@ -625,13 +627,13 @@ export default function App() {
           {/* Center-Top Badge Unlock Celebration Toast */}
           {recentBadgeBanner && (
             <div className="mx-auto pointer-events-auto bg-slate-950/95 border-2 border-amber-400 rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-3.5">
-              <BadgeIcon emblem={recentBadgeBanner.badge.emblem} size={52} />
+              <BadgeIcon emblem={recentBadgeBanner?.badge?.emblem} size={52} />
               <div>
                 <p className="text-xs font-bold text-emerald-400">
-                  Pos Selesai &amp; Tercentang di Leaderboard! (+{recentBadgeBanner.pointsEarned} Poin)
+                  Pos Selesai &amp; Tercentang di Leaderboard! (+{recentBadgeBanner?.pointsEarned || 0} Poin)
                 </p>
                 <p className="text-base font-extrabold text-white">
-                  Lencana Terbuka: {recentBadgeBanner.badge.name}
+                  Lencana Terbuka: {recentBadgeBanner?.badge?.name ?? 'Lencana Manasik'}
                 </p>
               </div>
             </div>
@@ -716,7 +718,7 @@ export default function App() {
 
               {!hudDockCollapsed && (
                 <div className="w-full bg-slate-950/92 border border-slate-800 rounded-2xl p-3.5 shadow-2xl space-y-2.5">
-                  {simProgress.warningMessage && (
+                  {simProgress?.warningMessage && (
                     <div className="px-3 py-2 rounded-xl bg-amber-950 border border-amber-500 text-xs font-bold text-amber-200">
                       {simProgress.warningMessage}
                     </div>
@@ -726,16 +728,16 @@ export default function App() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-extrabold text-amber-300">
-                          {simProgress.subStepLabel || activeStation.shortLabel}
+                          {simProgress?.subStepLabel || activeStation?.shortLabel || 'Pos'}
                         </span>
                         {simulationUnlocked && (
                           <span className="text-xs font-mono-num font-bold text-emerald-400">
-                            ({simProgress.currentCount}/{simProgress.targetCount})
+                            ({simProgress?.currentCount || 0}/{simProgress?.targetCount || 1})
                           </span>
                         )}
                       </div>
                       <p className="text-xs sm:text-sm text-slate-200 mt-0.5 leading-snug">
-                        {simProgress.hintMessage}
+                        {simProgress?.hintMessage || 'Ikuti petunjuk menuju pos ibadah'}
                       </p>
                     </div>
 
@@ -786,7 +788,7 @@ export default function App() {
                             Materi Pos
                           </button>
 
-                          {simProgress.canTriggerAction && simProgress.actionButtonLabel && (
+                          {simProgress?.canTriggerAction && simProgress?.actionButtonLabel && (
                             <button
                               type="button"
                               onClick={() => worldRef.current?.triggerAction()}
@@ -810,7 +812,7 @@ export default function App() {
                           width: `${Math.min(
                             100,
                             Math.round(
-                              (simProgress.currentCount / Math.max(1, simProgress.targetCount)) * 100
+                              ((simProgress?.currentCount || 0) / Math.max(1, simProgress?.targetCount || 1)) * 100
                             )
                           )}%`,
                         }}
@@ -842,7 +844,7 @@ export default function App() {
       {showFullLeaderboard && (
         <FullLeaderboardModal
           leaderboard={leaderboard}
-          currentStations={screen === 'title' ? [] : program.stations}
+          currentStations={screen === 'title' ? [] : (program?.stations || [])}
           completedStationIds={completedStationIds}
           onClose={() => setShowFullLeaderboard(false)}
         />
@@ -863,7 +865,7 @@ export default function App() {
       )}
 
       {/* Victory Appreciation & WhatsApp Report Submission Modal */}
-      {screen === 'victory' && (
+      {screen === 'victory' && program && (
         <VictoryModal
           entry={currentVictoryEntry}
           program={program}
