@@ -1,12 +1,12 @@
 import { BadgeEmblem } from '../types/game';
 
 interface BadgeIconProps {
-  emblem: BadgeEmblem;
+  emblem?: BadgeEmblem;
   size?: number;
   locked?: boolean;
 }
 
-export function BadgeIcon({ emblem, size = 56, locked = false }: BadgeIconProps) {
+export function BadgeIcon({ emblem = 'kaaba', size = 56, locked = false }: BadgeIconProps) {
   const palette: Record<BadgeEmblem, { bg: string; rim: string; accent: string }> = {
     ihram: { bg: '#065F46', rim: '#34D399', accent: '#ECFDF5' },
     kaaba: { bg: '#1E293B', rim: '#FBBF24', accent: '#FEF08A' },
@@ -19,7 +19,7 @@ export function BadgeIcon({ emblem, size = 56, locked = false }: BadgeIconProps)
 
   const c = locked
     ? { bg: '#1E293B', rim: '#475569', accent: '#64748B' }
-    : palette[emblem];
+    : palette[emblem] || palette.kaaba;
 
   return (
     <svg

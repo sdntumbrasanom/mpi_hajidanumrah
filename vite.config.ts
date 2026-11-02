@@ -5,10 +5,9 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    // 🔥 TAMBAHKAN BARIS INI
-    // Sesuaikan dengan nama repositori GitHub Anda (jangan lupa garis miring di awal dan akhir)
-    base: '/mpi_hajidanumrah/', 
-    
+    // Otomatis menggunakan '/mpi_hajidanumrah/' saat build GitHub Pages, dan '/' di server lokal / Cloud Run
+    base: process.env.GITHUB_ACTIONS ? '/mpi_hajidanumrah/' : '/',
+
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

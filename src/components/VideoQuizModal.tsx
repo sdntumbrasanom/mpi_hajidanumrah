@@ -4,31 +4,57 @@ import { QuizQuestion, StationConfig, VideoScene } from '../types/game';
 import { soundEngine } from '../utils/sound';
 import { BadgeIcon } from './BadgeIcon';
 
-function shuffleArray<T>(items: readonly T[] | null | undefined): T[] {
-  const arr = Array.isArray(items) ? [...items] : [];
+const FALLBACK_QUIZ_POOL: QuizQuestion[] = [
+  {
+    id: 'fallback_q1',
+    question: 'Sikap utama yang harus dijaga selama melaksanakan rangkaian ibadah Haji dan Umrah adalah...',
+    options: [
+      'Ikhlas karena Allah SWT, tertib mengikuti tuntunan, serta sabar dan santun',
+      'Tergesa-gesa mendorong jamaah lain supaya cepat selesai',
+      'Melewatkan rukun ibadah tanpa mengikuti urutan yang benar',
+      'Berbicara kasar ketika suasana pelataran sedang ramai',
+    ],
+    correctIndex: 0,
+    explanation:
+      'Benar! Ibadah Haji dan Umrah melatih keikhlasan, kesabaran, ketertiban, dan akhlak mulia.',
+  },
+];
 
+const FALLBACK_SCENE: VideoScene = {
+  title: 'Penjelasan Tahapan Ibadah',
+  narration: 'Perhatikan tata cara ibadah pada pos ini dengan tertib dan khusyuk sebelum memulai simulasi.',
+  visualType: 'kaaba_orbit',
+  durationSec: 6,
+};
+
+function shuffleArray<T>(items: readonly T[] | undefined | null): T[] {
+  if (!Array.isArray(items)) return [];
+  const arr = [...items];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-
   return arr;
 }
+
 function shuffleQuestionOptions(q: QuizQuestion): QuizQuestion {
-  const tagged = q.options.map((text, idx) => ({
+  const rawOptions = Array.isArray(q?.options) ? q.options : FALLBACK_QUIZ_POOL[0].options;
+  const tagged = rawOptions.map((text, idx) => ({
     text,
-    isCorrect: idx === q.correctIndex,
+    isCorrect: idx === (q?.correctIndex ?? 0),
   }));
   const shuffled = shuffleArray(tagged);
+  const foundIdx = shuffled.findIndex((item) => item.isCorrect);
   return {
     ...q,
     options: shuffled.map((item) => item.text),
-    correctIndex: shuffled.findIndex((item) => item.isCorrect),
+    correctIndex: foundIdx >= 0 ? foundIdx : 0,
   };
 }
 
-function buildRandomizedQuiz(pool: QuizQuestion[], takeCount = 3): QuizQuestion[] {
-  const selectedQuestions = shuffleArray(pool).slice(0, Math.min(takeCount, pool.length));
+function buildRandomizedQuiz(pool: QuizQuestion[] | undefined | null, takeCount = 3): QuizQuestion[] {
+  const safePool = Array.isArray(pool) && pool.length > 0 ? pool : FALLBACK_QUIZ_POOL;
+  const selectedQuestions = shuffleArray(safePool).slice(0, Math.min(takeCount, safePool.length));
   return selectedQuestions.map(shuffleQuestionOptions);
 }
 
@@ -352,11 +378,8 @@ export function VideoQuizModal({
 
   // Randomized Quiz state (both question order/selection AND A/B/C/D answer positions are shuffled per student)
   const [randomizedQuiz, setRandomizedQuiz] = useState<QuizQuestion[]>(() =>
-  buildRandomizedQuiz(
-    Array.isArray(station?.quiz) ? station.quiz : [],
-    3
-  )
-);
+    buildRandomizedQuiz(station.quiz, 3)
+  );
   const [qIdx, setQIdx] = useState(0);
   const [selectedOpt, setSelectedOpt] = useState<number | null>(null);
   const [answeredCorrectly, setAnsweredCorrectly] = useState(false);
@@ -365,22 +388,21 @@ export function VideoQuizModal({
   const [quizFinished, setQuizFinished] = useState(false);
 
   useEffect(() => {
-    setRandomizedQuiz(
-  buildRandomizedQuiz(
-    Array.isArray(station?.quiz) ? station.quiz : [],
-    3
-  )
-);
+    setRandomizedQuiz(buildRandomizedQuiz(station?.quiz, 3));
     setQIdx(0);
     setSelectedOpt(null);
     setAnsweredCorrectly(false);
     setHadWrongAttempt(false);
     setEarnedPoints(0);
     setQuizFinished(false);
-  }, [station.id, station.quiz]);
+  }, [station?.id, station?.quiz]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const currentScene = station.videoScenes[sceneIdx] ?? station.videoScenes[0];
+  const safeVideoScenes =
+    Array.isArray(station?.videoScenes) && station.videoScenes.length > 0
+      ? station.videoScenes
+      : [FALLBACK_SCENE];
+  const currentScene = safeVideoScenes[sceneIdx] ?? safeVideoScenes[0];
 
   // Narrate current scene when playing
   useEffect(() => {
@@ -408,7 +430,7 @@ export function VideoQuizModal({
         setSceneElapsed((prev) => {
           const next = prev + dt;
           if (next >= currentScene.durationSec) {
-            if (sceneIdx < station.videoScenes.length - 1) {
+            if (sceneIdx < safeVideoScenes.length - 1) {
               setSceneIdx((idx) => idx + 1);
               return 0;
             } else {
@@ -432,10 +454,10 @@ export function VideoQuizModal({
 
     raf = requestAnimationFrame(renderLoop);
     return () => cancelAnimationFrame(raf);
-  }, [phase, isPlaying, sceneIdx, currentScene, station.videoScenes.length]);
+  }, [phase, isPlaying, sceneIdx, currentScene, safeVideoScenes.length]);
 
-  const totalVideoDuration = station.videoScenes.reduce((acc, s) => acc + s.durationSec, 0);
-  const elapsedBeforeCurrent = station.videoScenes
+  const totalVideoDuration = safeVideoScenes.reduce((acc, s) => acc + s.durationSec, 0);
+  const elapsedBeforeCurrent = safeVideoScenes
     .slice(0, sceneIdx)
     .reduce((acc, s) => acc + s.durationSec, 0);
   const overallProgressPct = Math.min(
@@ -531,9 +553,9 @@ export function VideoQuizModal({
 
               {/* Scene Tabs Top-Left */}
               <div className="absolute top-3 left-3 flex items-center gap-1 bg-slate-950/85 p-1 rounded-lg border border-slate-700">
-                {station.videoScenes.map((sc, i) => (
+                {safeVideoScenes.map((sc, i) => (
                   <button
-                    key={sc.title}
+                    key={`${sc.title}_${i}`}
                     type="button"
                     onClick={() => {
                       soundEngine.playClick();
@@ -580,7 +602,7 @@ export function VideoQuizModal({
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-amber-300">{currentScene.title}</h3>
                 <span className="text-xs text-slate-400 font-mono-num">
-                  Adegan {sceneIdx + 1}/{station.videoScenes.length}
+                  Adegan {sceneIdx + 1}/{safeVideoScenes.length}
                 </span>
               </div>
               <p className="text-sm sm:text-base text-slate-100 leading-relaxed">

@@ -50,14 +50,15 @@ export function computeStudentGrade(entry: {
   predicate: string;
   isComplete: boolean;
 } {
-  const prog = WORSHIP_PROGRAMS[entry.worshipType];
-  const totalSt = Math.max(1, entry.totalStations || prog.stations.length);
-  const doneCount = Math.min(totalSt, entry.completedStationIds.length);
+  const prog = WORSHIP_PROGRAMS[entry?.worshipType] || WORSHIP_PROGRAMS.tamattu;
+  const completedIds = Array.isArray(entry?.completedStationIds) ? entry.completedStationIds : [];
+  const totalSt = Math.max(1, entry?.totalStations || prog.stations.length);
+  const doneCount = Math.min(totalSt, completedIds.length);
   const completionRatio = doneCount / totalSt;
   const completionPct = Math.round(completionRatio * 100);
 
   const maxExpectedPoints = prog.stations.reduce((acc, s) => acc + s.pointsReward + 90, 0);
-  const pointRatio = Math.min(1, entry.points / Math.max(1, maxExpectedPoints));
+  const pointRatio = Math.min(1, (entry?.points || 0) / Math.max(1, maxExpectedPoints));
 
   const rawScore = completionRatio * 75 + pointRatio * 25;
   const score100 = Math.min(100, Math.max(0, Math.round(rawScore)));
@@ -106,12 +107,13 @@ export function buildWhatsAppReportMessage(
   entry: LeaderboardEntry,
   teacherName?: string
 ): string {
-  const prog = WORSHIP_PROGRAMS[entry.worshipType];
+  const prog = WORSHIP_PROGRAMS[entry.worshipType] || WORSHIP_PROGRAMS.tamattu;
+  const completedIds = Array.isArray(entry.completedStationIds) ? entry.completedStationIds : [];
   const grade = computeStudentGrade(entry);
   const greetingTarget = teacherName?.trim() ? `Bapak/Ibu ${teacherName.trim()}` : 'Bapak/Ibu Guru';
 
   const completedLines = prog.stations.map((s) => {
-    const done = entry.completedStationIds.includes(s.id);
+    const done = completedIds.includes(s.id);
     return `${done ? '✅' : '⬜'} ${s.stepNumber}. ${s.title}`;
   });
 
@@ -121,8 +123,8 @@ export function buildWhatsAppReportMessage(
     ``,
     `*Nama Siswa* : ${entry.studentName}`,
     `*Kategori* : ${entry.gender === 'putra' ? 'Putra' : 'Putri'}`,
-    `*Program Ibadah* : ${WORSHIP_DISPLAY_NAMES[entry.worshipType]}`,
-    `*Ketuntasan Pos* : ${entry.completedStationIds.length}/${prog.stations.length} Pos (${grade.completionPct}%)`,
+    `*Program Ibadah* : ${WORSHIP_DISPLAY_NAMES[entry.worshipType] || "Haji Tamattu'"}`,
+    `*Ketuntasan Pos* : ${completedIds.length}/${prog.stations.length} Pos (${grade.completionPct}%)`,
     `*Nilai Akhir* : ${grade.score100}/100 (Predikat ${grade.letter} - ${grade.predicate})`,
     `*Total Poin* : ${entry.points} Poin`,
     `*Waktu Selesai* : ${formatTimestampId(entry.completedAt || entry.updatedAt)}`,
@@ -185,10 +187,11 @@ export function downloadAllResultsCSV(entries: LeaderboardEntry[]) {
   ];
 
   const rows = sorted.map((entry, idx) => {
-    const prog = WORSHIP_PROGRAMS[entry.worshipType];
+    const prog = WORSHIP_PROGRAMS[entry.worshipType] || WORSHIP_PROGRAMS.tamattu;
+    const completedIds = Array.isArray(entry.completedStationIds) ? entry.completedStationIds : [];
     const grade = computeStudentGrade(entry);
     const completedTitles = prog.stations
-      .filter((s) => entry.completedStationIds.includes(s.id))
+      .filter((s) => completedIds.includes(s.id))
       .map((s) => `${s.stepNumber}. ${s.shortLabel}`)
       .join(' | ');
 
@@ -196,8 +199,8 @@ export function downloadAllResultsCSV(entries: LeaderboardEntry[]) {
       idx + 1,
       entry.studentName,
       entry.gender === 'putra' ? 'Putra' : 'Putri',
-      WORSHIP_DISPLAY_NAMES[entry.worshipType],
-      entry.completedStationIds.length,
+      WORSHIP_DISPLAY_NAMES[entry.worshipType] || "Haji Tamattu'",
+      completedIds.length,
       prog.stations.length,
       `${grade.completionPct}%`,
       grade.score100,
@@ -241,10 +244,11 @@ export function downloadAllResultsExcel(entries: LeaderboardEntry[], teacherConf
 
   const tableRows = sorted
     .map((entry, idx) => {
-      const prog = WORSHIP_PROGRAMS[entry.worshipType];
+      const prog = WORSHIP_PROGRAMS[entry.worshipType] || WORSHIP_PROGRAMS.tamattu;
+      const completedIds = Array.isArray(entry.completedStationIds) ? entry.completedStationIds : [];
       const grade = computeStudentGrade(entry);
       const completedTitles = prog.stations
-        .filter((s) => entry.completedStationIds.includes(s.id))
+        .filter((s) => completedIds.includes(s.id))
         .map((s) => `${s.stepNumber}. ${s.shortLabel}`)
         .join(', ');
 
@@ -253,8 +257,8 @@ export function downloadAllResultsExcel(entries: LeaderboardEntry[], teacherConf
           <td style="text-align:center;">${idx + 1}</td>
           <td><b>${escapeHtml(entry.studentName)}</b></td>
           <td style="text-align:center;">${entry.gender === 'putra' ? 'Putra' : 'Putri'}</td>
-          <td>${escapeHtml(WORSHIP_DISPLAY_NAMES[entry.worshipType])}</td>
-          <td style="text-align:center;">${entry.completedStationIds.length} / ${prog.stations.length}</td>
+          <td>${escapeHtml(WORSHIP_DISPLAY_NAMES[entry.worshipType] || "Haji Tamattu'")}</td>
+          <td style="text-align:center;">${completedIds.length} / ${prog.stations.length}</td>
           <td style="text-align:center;">${grade.completionPct}%</td>
           <td style="text-align:center;"><b>${grade.score100}</b></td>
           <td style="text-align:center;">${grade.letter} - ${grade.predicate}</td>
@@ -320,7 +324,7 @@ export function downloadStudentResultCardPng(
   entry: LeaderboardEntry,
   teacherConfig?: TeacherConfig
 ) {
-  const prog = WORSHIP_PROGRAMS[entry.worshipType];
+  const prog = WORSHIP_PROGRAMS[entry.worshipType] || WORSHIP_PROGRAMS.tamattu;
   const grade = computeStudentGrade(entry);
 
   const canvas = document.createElement('canvas');

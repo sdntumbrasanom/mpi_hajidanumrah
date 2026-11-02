@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { WORSHIP_PROGRAMS } from '../data/manasikData';
-import { LeaderboardEntry, TeacherConfig, WorshipType } from '../types/game';
+import { LeaderboardEntry, StationConfig, TeacherConfig, WorshipType } from '../types/game';
 import {
   WORSHIP_DISPLAY_NAMES,
   computeStudentGrade,
@@ -133,9 +133,20 @@ export function TeacherPortalModal({
     setTimeout(() => setConfigSavedNotice(false), 3000);
   };
 
+  const verifyStaticDigest = async (u: string, p: string): Promise<boolean> => {
+    if (typeof window === 'undefined' || !window.crypto?.subtle) return false;
+    const raw = new TextEncoder().encode(`bloxmanasik_v1:${u}:${p}`);
+    const hashBuf = await window.crypto.subtle.digest('SHA-256', raw);
+    const hex = Array.from(new Uint8Array(hashBuf))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    return hex === 'b0a3d3c4c1d34d904a7bbc9d830f81fbe692943d97d7a8a1bdb1f6aae2185b0d';
+  };
+
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!usernameInput.trim() || !passwordInput) {
+    const trimmedUser = usernameInput.trim();
+    if (!trimmedUser || !passwordInput) {
       setAuthError('Mohon isi username dan password terlebih dahulu.');
       soundEngine.playWarning();
       return;
@@ -148,18 +159,37 @@ export function TeacherPortalModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: usernameInput.trim(),
+          username: trimmedUser,
           password: passwordInput,
         }),
       });
-      const data = (await res.json()) as {
-        ok?: boolean;
-        token?: string;
-        error?: string;
-      };
 
-      if (!res.ok || !data.ok || !data.token) {
-        setAuthError(data.error || 'Username atau password yang Anda masukkan salah.');
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = (await res.json()) as {
+          ok?: boolean;
+          token?: string;
+          error?: string;
+        };
+
+        if (!res.ok || !data.ok || !data.token) {
+          setAuthError(data.error || 'Username atau password yang Anda masukkan salah.');
+          soundEngine.playWarning();
+          return;
+        }
+
+        soundEngine.playIhramSwap();
+        setUsernameInput('');
+        setPasswordInput('');
+        onAuthenticated(data.token);
+        onRefresh();
+        return;
+      }
+
+      // Fallback for static hosting (e.g. GitHub Pages where /api/* is not served by Express)
+      const okDigest = await verifyStaticDigest(trimmedUser, passwordInput);
+      if (!okDigest) {
+        setAuthError('Username atau password yang Anda masukkan salah.');
         soundEngine.playWarning();
         return;
       }
@@ -167,11 +197,21 @@ export function TeacherPortalModal({
       soundEngine.playIhramSwap();
       setUsernameInput('');
       setPasswordInput('');
-      onAuthenticated(data.token);
+      onAuthenticated(`static_${Date.now()}`);
       onRefresh();
     } catch {
-      setAuthError('Gagal menghubungi server otentikasi. Periksa koneksi Anda.');
-      soundEngine.playWarning();
+      // Offline / static host network fallback via SHA-256 digest
+      const okDigest = await verifyStaticDigest(trimmedUser, passwordInput);
+      if (!okDigest) {
+        setAuthError('Username atau password yang Anda masukkan salah.');
+        soundEngine.playWarning();
+        return;
+      }
+      soundEngine.playIhramSwap();
+      setUsernameInput('');
+      setPasswordInput('');
+      onAuthenticated(`static_${Date.now()}`);
+      onRefresh();
     } finally {
       setIsAuthenticating(false);
     }
@@ -669,7 +709,7 @@ interface FragmentRowProps {
   index: number;
   entry: LeaderboardEntry;
   programName: string;
-  stations: ReturnType<typeof useMemo> extends never ? never : any[];
+  stations: StationConfig[];
   grade: ReturnType<typeof computeStudentGrade>;
   isExpanded: boolean;
   isConfirmingDelete: boolean;

@@ -40,13 +40,63 @@ const STORAGE_KEY = 'bloxmanasik_leaderboard_v2';
 const TEACHER_CONFIG_STORAGE_KEY = 'bloxmanasik_teacher_config_v1';
 const LAST_TEACHER_PHONE_KEY = 'bloxmanasik_last_teacher_phone_v1';
 
+function sanitizeLeaderboardEntry(raw: Partial<LeaderboardEntry> | null | undefined): LeaderboardEntry | null {
+  if (!raw || typeof raw.id !== 'string' || typeof raw.studentName !== 'string') return null;
+  const validWorship: WorshipType =
+    raw.worshipType === 'umrah' ||
+    raw.worshipType === 'tamattu' ||
+    raw.worshipType === 'qiran' ||
+    raw.worshipType === 'ifrad'
+      ? raw.worshipType
+      : 'tamattu';
+  const prog = WORSHIP_PROGRAMS[validWorship];
+  const cleanCompleted = Array.isArray(raw.completedStationIds)
+    ? raw.completedStationIds.filter((x): x is string => typeof x === 'string')
+    : [];
+  const cleanBadges = Array.isArray(raw.badges)
+    ? raw.badges
+        .map((b) => (typeof b === 'string' ? b : (b as { emblem?: string })?.emblem))
+        .filter(
+          (b): b is BadgeEmblem =>
+            b === 'ihram' ||
+            b === 'kaaba' ||
+            b === 'sai' ||
+            b === 'dam' ||
+            b === 'arafah' ||
+            b === 'jumrah' ||
+            b === 'crown'
+        )
+    : [];
+
+  return {
+    id: raw.id,
+    studentName: raw.studentName,
+    teacherPhone: typeof raw.teacherPhone === 'string' ? raw.teacherPhone : '',
+    gender: raw.gender === 'putri' ? 'putri' : 'putra',
+    worshipType: validWorship,
+    points: typeof raw.points === 'number' && Number.isFinite(raw.points) ? raw.points : 0,
+    completedStationIds: cleanCompleted,
+    totalStations:
+      typeof raw.totalStations === 'number' && raw.totalStations > 0
+        ? raw.totalStations
+        : prog.stations.length,
+    badges: cleanBadges,
+    updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : Date.now(),
+    completedAt: typeof raw.completedAt === 'number' ? raw.completedAt : undefined,
+  };
+}
+
 function loadSavedLeaderboard(): LeaderboardEntry[] {
   if (typeof window === 'undefined') return INITIAL_CLASS_LEADERBOARD;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return INITIAL_CLASS_LEADERBOARD;
-    const parsed = JSON.parse(raw) as LeaderboardEntry[];
-    if (Array.isArray(parsed)) return parsed;
+    const parsed = JSON.parse(raw) as unknown[];
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((item) => sanitizeLeaderboardEntry(item as Partial<LeaderboardEntry>))
+        .filter((item): item is LeaderboardEntry => item !== null);
+    }
   } catch {
     // Fallback
   }
