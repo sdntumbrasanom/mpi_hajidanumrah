@@ -559,7 +559,7 @@ export default function App() {
 
               <div className="px-3.5 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-slate-100">
                 <p className="text-[11px] text-amber-400 font-semibold leading-none">
-                  {program?.name} · Pos {activeStation?.stepNumber}/{program?.stations?.length}
+                  {program?.name ?? 'Manasik'} · Pos {activeStation?.stepNumber ?? 1}/{program?.stations?.length ?? 1}
                 </p>
                 <p className="text-sm font-bold text-white mt-0.5">{activeStation?.title}</p>
               </div>
@@ -633,7 +633,7 @@ export default function App() {
                   Pos Selesai &amp; Tercentang di Leaderboard! (+{recentBadgeBanner?.pointsEarned || 0} Poin)
                 </p>
                 <p className="text-base font-extrabold text-white">
-                  Lencana Terbuka: {recentBadgeBanner?.badge?.name ?? 'Lencana Manasik'}
+                  Lencana Terbuka: {recentBadgeBanner?.badge?.name ?? 'Lencana'}
                 </p>
               </div>
             </div>
