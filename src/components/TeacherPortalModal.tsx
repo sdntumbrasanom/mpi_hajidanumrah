@@ -54,13 +54,13 @@ export function TeacherPortalModal({
   const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   const [showConfigPanel, setShowConfigPanel] = useState(false);
-  const [schoolInput, setSchoolInput] = useState(teacherConfig.schoolName);
-  const [teacherNameInput, setTeacherNameInput] = useState(teacherConfig.teacherName);
-  const [teacherPhoneInput, setTeacherPhoneInput] = useState(teacherConfig.teacherPhone);
+  const [schoolInput, setSchoolInput] = useState(teacherConfig?.schoolName || '');
+  const [teacherNameInput, setTeacherNameInput] = useState(teacherConfig?.teacherName || '');
+  const [teacherPhoneInput, setTeacherPhoneInput] = useState(teacherConfig?.teacherPhone || '');
   const [configSavedNotice, setConfigSavedNotice] = useState(false);
 
   const stats = useMemo(() => {
-    const totalStudents = entries.length;
+    const totalStudents = entries?.length || 0;
     if (totalStudents === 0) {
       return {
         totalStudents: 0,
@@ -74,11 +74,11 @@ export function TeacherPortalModal({
     let scoreSum = 0;
     let pctSum = 0;
 
-    for (const item of entries) {
+    for (const item of (entries || [])) {
       const g = computeStudentGrade(item);
-      if (g.isComplete) completedCount++;
-      scoreSum += g.score100;
-      pctSum += g.completionPct;
+      if (g?.isComplete) completedCount++;
+      scoreSum += g?.score100 || 0;
+      pctSum += g?.completionPct || 0;
     }
 
     return {
@@ -91,20 +91,20 @@ export function TeacherPortalModal({
 
   const filteredEntries = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return [...entries]
+    return [...(entries || [])]
       .filter((item) => {
-        if (worshipFilter !== 'all' && item.worshipType !== worshipFilter) return false;
+        if (worshipFilter !== 'all' && item?.worshipType !== worshipFilter) return false;
         const g = computeStudentGrade(item);
-        if (statusFilter === 'complete' && !g.isComplete) return false;
-        if (statusFilter === 'incomplete' && g.isComplete) return false;
+        if (statusFilter === 'complete' && !g?.isComplete) return false;
+        if (statusFilter === 'incomplete' && g?.isComplete) return false;
         if (q) {
-          const matchName = item.studentName.toLowerCase().includes(q);
-          const matchPhone = (item.teacherPhone ?? '').toLowerCase().includes(q);
+          const matchName = (item?.studentName || '').toLowerCase().includes(q);
+          const matchPhone = (item?.teacherPhone ?? '').toLowerCase().includes(q);
           if (!matchName && !matchPhone) return false;
         }
         return true;
       })
-      .sort((a, b) => b.updatedAt - a.updatedAt);
+      .sort((a, b) => (b?.updatedAt || 0) - (a?.updatedAt || 0));
   }, [entries, searchQuery, worshipFilter, statusFilter]);
 
   const handleSaveConfig = async (e: FormEvent) => {
@@ -152,7 +152,7 @@ export function TeacherPortalModal({
 
           <button
             type="button"
-            disabled={entries.length === 0}
+            disabled={!entries || entries.length === 0}
             onClick={() => {
               soundEngine.playClick();
               downloadAllResultsCSV(entries);
@@ -165,7 +165,7 @@ export function TeacherPortalModal({
 
           <button
             type="button"
-            disabled={entries.length === 0}
+            disabled={!entries || entries.length === 0}
             onClick={() => {
               soundEngine.playClick();
               downloadAllResultsExcel(entries, teacherConfig);
@@ -234,7 +234,7 @@ export function TeacherPortalModal({
                 <span className="text-sm font-semibold text-slate-200">
                   Pengaturan Identitas Guru &amp; Nomor WhatsApp Default
                 </span>
-                {teacherConfig.teacherPhone && (
+                {teacherConfig?.teacherPhone && (
                   <span className="text-xs text-slate-400 font-mono-num">
                     · {formatPhoneDisplay(teacherConfig.teacherPhone)}
                   </span>
@@ -369,7 +369,7 @@ export function TeacherPortalModal({
             </div>
 
             {/* Safe Two-Step Clear Class Data */}
-            {entries.length > 0 && (
+            {entries && entries.length > 0 && (
               <div className="flex items-center gap-2 shrink-0">
                 {!confirmClearAll ? (
                   <button
@@ -408,7 +408,7 @@ export function TeacherPortalModal({
 
           {/* 4. Student Results Data Grid */}
           <div className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
-            {filteredEntries.length === 0 ? (
+            {!filteredEntries || filteredEntries.length === 0 ? (
               <div className="py-14 px-6 text-center space-y-2">
                 <p className="text-sm font-semibold text-slate-300">
                   Belum ada data hasil simulasi siswa yang sesuai filter.
@@ -435,30 +435,34 @@ export function TeacherPortalModal({
                   </thead>
                   <tbody className="divide-y divide-slate-800/80">
                     {filteredEntries.map((entry, idx) => {
-                      const prog = WORSHIP_PROGRAMS[entry.worshipType];
+                      // Gunakan fallback ke 'tamattu' jika worshipType tidak dikenali agar tidak undefined
+                      const progKey = entry?.worshipType && WORSHIP_PROGRAMS[entry.worshipType] ? entry.worshipType : 'tamattu';
+                      const prog = WORSHIP_PROGRAMS[progKey];
                       const grade = computeStudentGrade(entry);
-                      const isExpanded = expandedRowId === entry.id;
+                      const isExpanded = expandedRowId === entry?.id;
 
                       return (
                         <FragmentRow
-                          key={entry.id}
+                          key={entry?.id || idx}
                           index={idx + 1}
                           entry={entry}
-                          programName={WORSHIP_DISPLAY_NAMES[entry.worshipType]}
-                          stations={prog.stations}
+                          programName={WORSHIP_DISPLAY_NAMES[progKey] || 'Haji Tamattu'}
+                          stations={prog?.stations || []}
                           grade={grade}
                           isExpanded={isExpanded}
-                          isConfirmingDelete={confirmDeleteId === entry.id}
+                          isConfirmingDelete={confirmDeleteId === entry?.id}
                           onToggleExpand={() =>
-                            setExpandedRowId((prev) => (prev === entry.id ? null : entry.id))
+                            setExpandedRowId((prev) => (prev === entry?.id ? null : entry?.id))
                           }
                           onDownloadCard={() =>
                             downloadStudentResultCardPng(entry, teacherConfig)
                           }
-                          onRequestDelete={() => setConfirmDeleteId(entry.id)}
+                          onRequestDelete={() => setConfirmDeleteId(entry?.id)}
                           onCancelDelete={() => setConfirmDeleteId(null)}
                           onConfirmDelete={async () => {
-                            await onDeleteEntry(entry.id);
+                            if (entry?.id) {
+                              await onDeleteEntry(entry.id);
+                            }
                             setConfirmDeleteId(null);
                           }}
                         />
@@ -479,7 +483,7 @@ interface FragmentRowProps {
   index: number;
   entry: LeaderboardEntry;
   programName: string;
-  stations: (typeof WORSHIP_PROGRAMS)['tamattu']['stations'];
+  stations: ReturnType<typeof useMemo> extends never ? never : any[];
   grade: ReturnType<typeof computeStudentGrade>;
   isExpanded: boolean;
   isConfirmingDelete: boolean;
@@ -509,9 +513,9 @@ function FragmentRow({
       <tr className="hover:bg-slate-800/40 transition-colors">
         <td className="py-3 px-4 font-mono-num text-xs text-slate-400">{index}</td>
         <td className="py-3 px-4">
-          <div className="font-semibold text-white">{entry.studentName}</div>
+          <div className="font-semibold text-white">{entry?.studentName || 'Siswa'}</div>
           <div className="text-xs text-slate-400">
-            {entry.gender === 'putra' ? 'Putra' : 'Putri'}
+            {entry?.gender === 'putra' ? 'Putra' : 'Putri'}
           </div>
         </td>
         <td className="py-3 px-4 text-xs font-medium text-slate-200 whitespace-nowrap">
@@ -520,36 +524,36 @@ function FragmentRow({
         <td className="py-3 px-4">
           <div className="flex items-center gap-2">
             <span className="font-mono-num text-xs font-semibold text-slate-200 whitespace-nowrap">
-              {entry.completedStationIds.length}/{stations.length} Pos
+              {entry?.completedStationIds?.length || 0}/{stations?.length || 0} Pos
             </span>
             <span className="text-slate-600" aria-hidden="true">·</span>
             <span
               className={`text-xs font-medium whitespace-nowrap ${
-                grade.isComplete ? 'text-emerald-400' : 'text-amber-300'
+                grade?.isComplete ? 'text-emerald-400' : 'text-amber-300'
               }`}
             >
-              {grade.isComplete ? 'Tuntas' : `${grade.completionPct}%`}
+              {grade?.isComplete ? 'Tuntas' : `${grade?.completionPct || 0}%`}
             </span>
           </div>
           <div className="w-28 h-1.5 bg-slate-950 rounded-full overflow-hidden mt-1">
             <div
-              className={`h-full ${grade.isComplete ? 'bg-emerald-500' : 'bg-amber-400'}`}
-              style={{ width: `${grade.completionPct}%` }}
+              className={`h-full ${grade?.isComplete ? 'bg-emerald-500' : 'bg-amber-400'}`}
+              style={{ width: `${grade?.completionPct || 0}%` }}
             />
           </div>
         </td>
         <td className="py-3 px-4 text-right font-mono-num">
-          <span className="font-bold text-white">{grade.score100}</span>
-          <span className="text-xs text-slate-400 ml-1">({grade.letter})</span>
+          <span className="font-bold text-white">{grade?.score100 || 0}</span>
+          <span className="text-xs text-slate-400 ml-1">({grade?.letter || 'C'})</span>
         </td>
         <td className="py-3 px-4 text-right font-mono-num font-semibold text-amber-300">
-          {entry.points}
+          {entry?.points || 0}
         </td>
         <td className="py-3 px-4 font-mono-num text-xs text-slate-300 whitespace-nowrap">
-          {formatPhoneDisplay(entry.teacherPhone)}
+          {formatPhoneDisplay(entry?.teacherPhone)}
         </td>
         <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap">
-          {formatTimestampId(entry.completedAt || entry.updatedAt)}
+          {formatTimestampId(entry?.completedAt || entry?.updatedAt || Date.now())}
         </td>
         <td className="py-3 px-4 text-right">
           <div className="inline-flex items-center justify-end gap-1.5">
@@ -609,14 +613,14 @@ function FragmentRow({
           <td colSpan={9} className="px-6 py-4">
             <div className="space-y-2">
               <p className="text-xs font-semibold text-slate-300">
-                Rincian Tahapan {programName} — {entry.studentName}:
+                Rincian Tahapan {programName} — {entry?.studentName || 'Siswa'}:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {stations.map((st) => {
-                  const done = entry.completedStationIds.includes(st.id);
+                {(stations || []).map((st) => {
+                  const done = entry?.completedStationIds?.includes(st?.id);
                   return (
                     <div
-                      key={st.id}
+                      key={st?.id}
                       className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-xs ${
                         done
                           ? 'bg-emerald-950/40 border-emerald-800/70 text-emerald-200'
@@ -624,8 +628,8 @@ function FragmentRow({
                       }`}
                     >
                       <span className="truncate">
-                        <span className="font-mono-num mr-1.5">{st.stepNumber}.</span>
-                        {st.title}
+                        <span className="font-mono-num mr-1.5">{st?.stepNumber || 1}.</span>
+                        {st?.title || st?.shortLabel || 'Pos Ibadah'}
                       </span>
                       <span className="shrink-0 font-semibold">
                         {done ? (
