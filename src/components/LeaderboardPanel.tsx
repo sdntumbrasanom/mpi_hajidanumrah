@@ -235,9 +235,7 @@ export function FullLeaderboardModal({
                     >
                       <BadgeIcon emblem={st?.badge?.emblem} size={48} locked={!unlocked} />
                       <div>
-                        <p className="text-xs font-bold text-white leading-tight">
-                          {st?.badge?.name ?? 'Pos Ibadah'}
-                        </p>
+                        <p className="text-xs font-bold text-white leading-tight">{st?.badge?.name ?? 'Pos Ibadah'}</p>
                         <p className="text-[11px] text-slate-400 mt-0.5">
                           Pos {st?.stepNumber} · {st?.shortLabel}
                         </p>
