@@ -4,15 +4,16 @@ import { QuizQuestion, StationConfig, VideoScene } from '../types/game';
 import { soundEngine } from '../utils/sound';
 import { BadgeIcon } from './BadgeIcon';
 
-function shuffleArray<T>(items: readonly T[]): T[] {
-  const arr = [...items];
+function shuffleArray<T>(items: readonly T[] | null | undefined): T[] {
+  const arr = Array.isArray(items) ? [...items] : [];
+
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
+
   return arr;
 }
-
 function shuffleQuestionOptions(q: QuizQuestion): QuizQuestion {
   const tagged = q.options.map((text, idx) => ({
     text,
@@ -351,8 +352,11 @@ export function VideoQuizModal({
 
   // Randomized Quiz state (both question order/selection AND A/B/C/D answer positions are shuffled per student)
   const [randomizedQuiz, setRandomizedQuiz] = useState<QuizQuestion[]>(() =>
-    buildRandomizedQuiz(station.quiz, 3)
-  );
+  buildRandomizedQuiz(
+    Array.isArray(station?.quiz) ? station.quiz : [],
+    3
+  )
+);
   const [qIdx, setQIdx] = useState(0);
   const [selectedOpt, setSelectedOpt] = useState<number | null>(null);
   const [answeredCorrectly, setAnsweredCorrectly] = useState(false);
@@ -361,7 +365,12 @@ export function VideoQuizModal({
   const [quizFinished, setQuizFinished] = useState(false);
 
   useEffect(() => {
-    setRandomizedQuiz(buildRandomizedQuiz(station.quiz, 3));
+    setRandomizedQuiz(
+  buildRandomizedQuiz(
+    Array.isArray(station?.quiz) ? station.quiz : [],
+    3
+  )
+);
     setQIdx(0);
     setSelectedOpt(null);
     setAnsweredCorrectly(false);
